@@ -1,7 +1,7 @@
-# Use an official Python runtime as the base image
+# Use Python 3.12 slim image
 FROM python:3.12-slim
 
-# Install system dependencies
+# Install system dependencies (including distutils, pulseaudio, Xvfb)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gnupg \
@@ -27,32 +27,42 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Fetch & dearmor Google’s signing key, add Chrome repo
-RUN wget -qO - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-      | gpg --dearmor --yes -o /usr/share/keyrings/google-chrome-archive-keyring.gpg && \
+RUN wget -qO - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor --yes -o /usr/share/keyrings/google-chrome-archive-keyring.gpg && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-archive-keyring.gpg] \
-      http://dl.google.com/linux/chrome/deb/ stable main" \
-      > /etc/apt/sources.list.d/google-chrome.list
+    http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 
 # Install Google Chrome
 RUN apt-get update && \
     apt-get install -y --no-install-recommends google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Expose port for Flask
+# Expose port for Flask (5001)
 EXPOSE 5001
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy the application code
+# Copy the application code into the container
 COPY . .
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Set environment variable for pulseaudio to avoid user instance conflict
+# Create a non-root user to run the application
+RUN useradd -m botuser && \
+    apt-get install pulseaudio && \
+    echo "botuser:botpassword" | chpasswd && \
+    usermod -aG audio botuser
+
+# Set environment variable for pulseaudio
 ENV PULSE_SERVER=unix:/run/user/1000/pulse/native
 
-# Start the application with the proper entrypoint
+# Remove any existing Xvfb lock file to avoid display conflicts
+RUN rm -f /tmp/.X99-lock
+
+# Switch to the new user to avoid running as root
+USER botuser
+
+# Start pulseaudio and Xvfb, then run the app
 ENTRYPOINT ["/bin/sh", "-c", "pulseaudio --start --exit-idle-time=-1 && Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && exec python3 google_meet_bot_web.py"]
