@@ -1,0 +1,4 @@
+cd gm_bot
+echo "__pycache__" > .gitignore
+echo "*.pyc" >> .gitignore
+echo "*.mp4" >> .gitignore
