@@ -51,9 +51,8 @@ COPY . .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 7) Expose port and set up container start commands
+# 7) Expose port
 EXPOSE 5000
 
-# Start PulseAudio, then run your script via python3
-ENTRYPOINT ["pulseaudio", "--start", "--exit-idle-time=-1"]
-CMD ["python3", "google_meet_bot_web.py"]
+# 8) Start PulseAudio then launch your script in one shell command
+ENTRYPOINT ["/bin/sh", "-c", "pulseaudio --start --exit-idle-time=-1 && exec python3 google_meet_bot_web.py"]
