@@ -1,7 +1,7 @@
-# Use Python 3.12 slim image
+# Use the Python 3.12 slim image
 FROM python:3.12-slim
 
-# Install system dependencies (including distutils, pulseaudio, Xvfb)
+# Install system dependencies (including distutils, pulseaudio, and other necessary tools)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gnupg \
@@ -23,6 +23,8 @@ RUN apt-get update && \
     libxrandr2 \
     libgbm1 \
     libasound2 \
+    python3-setuptools \
+    python3-pip \
     python3-distutils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +38,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Expose port for Flask (5001)
+# Expose the required port for Flask
 EXPOSE 5001
 
 # Set working directory
@@ -49,9 +51,8 @@ COPY . .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Create a non-root user to run the application
+# Create a non-root user for security reasons
 RUN useradd -m botuser && \
-    apt-get install pulseaudio && \
     echo "botuser:botpassword" | chpasswd && \
     usermod -aG audio botuser
 
@@ -64,5 +65,5 @@ RUN rm -f /tmp/.X99-lock
 # Switch to the new user to avoid running as root
 USER botuser
 
-# Start pulseaudio and Xvfb, then run the app
+# Start pulseaudio and Xvfb, then run the application
 ENTRYPOINT ["/bin/sh", "-c", "pulseaudio --start --exit-idle-time=-1 && Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && exec python3 google_meet_bot_web.py"]
