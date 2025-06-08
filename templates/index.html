@@ -1,77 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Meet Recorder</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        h1 {
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #555;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        input[type="submit"] {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        input[type="submit"]:hover {
-            background-color: #45a049;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Google Meet Recorder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; margin: 0; background-color: #f0f2f5;
+    }
+    .container {
+      background: white; padding: 20px; border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      width: 100%; max-width: 400px; text-align: center;
+    }
+    h1 { color: #333; font-size: 24px; margin-bottom: 20px; }
+    label { display: block; margin-bottom: 10px; font-weight: bold; color: #555; }
+    input[type="text"] {
+      width: 100%; padding: 10px; margin-bottom: 20px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 16px;
+    }
+    input[type="submit"], button {
+      background-color: #4CAF50; color: white;
+      padding: 10px 20px; border: none; border-radius: 4px;
+      cursor: pointer; font-size: 16px; transition: background-color 0.3s;
+    }
+    input[type="submit"]:hover:not(:disabled),
+    button:hover:not(:disabled) { background-color: #45a049; }
+    button#stopBtn {
+      background-color: #f44336; margin-top: 10px;
+    }
+    button#stopBtn:hover:not(:disabled) { background-color: #da190b; }
+    input[type="submit"]:disabled,
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .status { margin-top: 20px; font-size: 14px; color: #555; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Google Meet Recorder</h1>
-        <form method="POST">
-            <label for="meeting_id">Enter Google Meet ID (e.g., xxx-xxxx-xxx):</label>
-            <input type="text" id="meeting_id" name="meeting_id" required>
-            <input type="submit" value="Submit">
-        </form>
-        {% if error %}
-            <p class="error">{{ error }}</p>
-        {% endif %}
-    </div>
+  <div class="container">
+    <h1>Google Meet Recorder</h1>
+
+    <!-- START FORM -->
+    <form id="startForm">
+      <label for="meeting_id">Enter Meet ID (xxx-xxxx-xxx):</label>
+      <input type="text" id="meeting_id" name="meeting_id" required/>
+      <input type="submit" id="submitBtn" value="Start Recording"/>
+    </form>
+
+    <!-- STOP BUTTON -->
+    <button id="stopBtn" style="display:none;">Stop Recording</button>
+
+    <!-- STATUS MESSAGE -->
+    <p id="status" class="status"></p>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form       = document.getElementById("startForm");
+      const submitBtn  = document.getElementById("submitBtn");
+      const stopBtn    = document.getElementById("stopBtn");
+      const statusEl   = document.getElementById("status");
+
+      // Handle form submit -> start recording
+      form.addEventListener("submit", async e => {
+        e.preventDefault();
+        const mid = document.getElementById("meeting_id").value.trim();
+        if (!mid) {
+          statusEl.textContent = "Please enter a valid Meet ID.";
+          return;
+        }
+
+        submitBtn.disabled = true;
+        statusEl.textContent = "Starting recording…";
+
+        try {
+          const res = await fetch("/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `action=start&meeting_id=${encodeURIComponent(mid)}`
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || "Failed to start");
+
+          statusEl.textContent = "Recording started.";
+          form.style.display = "none";
+          stopBtn.style.display = "inline-block";
+        } catch (err) {
+          statusEl.textContent = "Error: " + err.message;
+          submitBtn.disabled = false;
+        }
+      });
+
+      // Handle stop button -> stop recording
+      stopBtn.addEventListener("click", async () => {
+        stopBtn.disabled = true;
+        statusEl.textContent = "Stopping recording…";
+
+        try {
+          const res = await fetch("/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "action=stop"
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || "Failed to stop");
+
+          statusEl.textContent = "Recording stopped and uploaded.";
+          stopBtn.style.display = "none";
+        } catch (err) {
+          statusEl.textContent = "Error: " + err.message;
+          stopBtn.disabled = false;
+        }
+      });
+    });
+  </script>
 </body>
 </html>
