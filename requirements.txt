@@ -1,5 +1,5 @@
-echo "Flask==3.0.3" > requirements.txt
-echo "undetected-chromedriver==3.5.5" >> requirements.txt
-echo "selenium==4.25.0" >> requirements.txt
-echo "google-auth-oauthlib==1.2.1" >> requirements.txt
-echo "google-api-python-client==2.147.0" >> requirements.txt
+Flask==3.0.3
+undetected-chromedriver==3.5.5
+selenium==4.25.0
+google-auth-oauthlib==1.2.1
+google-api-python-client==2.147.0
