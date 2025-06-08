@@ -1,7 +1,7 @@
 # Use an official Python runtime as the base image
 FROM python:3.12-slim
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gnupg \
@@ -22,8 +22,12 @@ RUN apt-get update && \
     libxfixes3 \
     libxrandr2 \
     libgbm1 \
-    libasound2 && \
-    rm -rf /var/lib/apt/lists/*
+    libasound2 \
+    python3-distutils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install distutils for Python 3.12 (to fix 'ModuleNotFoundError: No module named distutils')
+RUN apt-get install -y python3-distutils
 
 # Fetch & dearmor Google’s signing key, add Chrome repo
 RUN wget -qO - https://dl-ssl.google.com/linux/linux_signing_key.pub \
@@ -37,26 +41,21 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Prepare PulseAudio socket permissions
-RUN mkdir -p /var/run/pulse && \
-    chown root:audio /var/run/pulse && \
-    chmod 775 /var/run/pulse
-
-# Set the PULSE_SERVER environment variable for Pulseaudio
-ENV PULSE_SERVER=unix:/run/user/1000/pulse/native
-
-# Expose port
+# Expose port for Flask
 EXPOSE 5001
 
-# Set up the working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy application files
+# Copy the application code
 COPY . .
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Entry point command
-ENTRYPOINT ["/bin/bash", "-c", "pulseaudio --start --exit-idle-time=-1 && exec python3 google_meet_bot_web.py"]
+# Set environment variable for pulseaudio to avoid user instance conflict
+ENV PULSE_SERVER=unix:/run/user/1000/pulse/native
+
+# Start the application with the proper entrypoint
+ENTRYPOINT ["/bin/sh", "-c", "pulseaudio --start --exit-idle-time=-1 && Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && exec python3 google_meet_bot_web.py"]
