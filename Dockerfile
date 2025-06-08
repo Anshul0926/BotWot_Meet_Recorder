@@ -26,9 +26,6 @@ RUN apt-get update && \
     python3-distutils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install distutils for Python 3.12 (to fix 'ModuleNotFoundError: No module named distutils')
-RUN apt-get install -y python3-distutils
-
 # Fetch & dearmor Google’s signing key, add Chrome repo
 RUN wget -qO - https://dl-ssl.google.com/linux/linux_signing_key.pub \
       | gpg --dearmor --yes -o /usr/share/keyrings/google-chrome-archive-keyring.gpg && \
