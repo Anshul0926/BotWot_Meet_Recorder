@@ -135,16 +135,6 @@ def join_google_meet(link):
         logger.info(f"Navigating to meeting link: {link}")
         driver.get(link)
 
-        # Check and click 'Got it' on the pop-up
-        try:
-            got_it_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Got it')]"))
-            )
-            driver.execute_script("arguments[0].click();", got_it_button)
-            logger.info("Clicked 'Got it' on the pop-up.")
-        except Exception:
-            logger.info("'Got it' pop-up did not appear, continuing.")
-
         # Wait for the name input to appear
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.XPATH, "//input[@placeholder='Your name']"))
@@ -153,14 +143,14 @@ def join_google_meet(link):
         inp.clear()
         inp.send_keys("BotWot")
 
-        # turn off mic and camera if not already
+        # Turn off mic and camera if not already
         for lbl in ("camera", "microphone"):
             try:
                 btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, f"//div[contains(@aria-label,'{lbl}')]")))
                 if "Turn off" in btn.get_attribute("aria-label"):
                     btn.click()
             except:
-                pass
+                logger.info(f"No {lbl} button found or already off.")
 
         # Click 'Continue without microphone and camera' if pop-up appears
         try:
@@ -171,6 +161,17 @@ def join_google_meet(link):
             logger.info("Clicked 'Continue without microphone and camera'.")
         except:
             logger.info("No 'Continue without microphone and camera' button found.")
+
+        # Check and click 'Got it' on the pop-up
+        try:
+            # Use a more robust XPath to account for case variations and structure
+            got_it_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(translate(text(), 'GOTIT', 'gotit'), 'got it')]"))
+            )
+            driver.execute_script("arguments[0].click();", got_it_button)
+            logger.info("Clicked 'Got it' on the pop-up.")
+        except Exception as e:
+            logger.info(f"'Got it' pop-up did not appear or could not be clicked: {str(e)}")
 
         # Click Join button
         join = WebDriverWait(driver, 60).until(EC.any_of(
